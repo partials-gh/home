@@ -1,21 +1,948 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Example HTML Page</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Partials</title>
+<link rel="icon" id="favicon-link" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%230b0b0d'/><circle cx='16' cy='16' r='6' fill='none' stroke='%234ade80' stroke-width='2'/><circle cx='16' cy='16' r='2' fill='%234ade80'/></svg>">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Fraunces:ital,opsz,wght@0,9..144,200;0,9..144,300;0,9..144,700;1,9..144,200&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+:root{
+  --bg:#0b0b0d;
+  --surface:#131316;
+  --surface2:#1a1a1f;
+  --surface3:#202026;
+  --border:#252529;
+  --border-strong:#333339;
+  --text:#e4e2dc;
+  --text-muted:#565660;
+  --text-dim:#353540;
+  --accent:#4ade80;
+  --accent-dim:rgba(74,222,128,0.08);
+  --accent-glow:rgba(74,222,128,0.15);
+  --danger:#f87171;
+  --mono:'DM Mono',monospace;
+  --serif:'Fraunces',serif;
+}
+
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--mono);font-size:13px;line-height:1.6;overflow-x:hidden;}
+
+/* ── NOISE TEXTURE ── */
+body::before{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+  opacity:0.4;
+}
+
+/* ── GRID BG ── */
+.grid-bg{
+  position:fixed;inset:0;pointer-events:none;z-index:0;
+  background-image:
+    linear-gradient(rgba(74,222,128,0.025) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(74,222,128,0.025) 1px,transparent 1px);
+  background-size:48px 48px;
+  mask-image:radial-gradient(ellipse 80% 80% at 50% 0%,black 30%,transparent 100%);
+}
+
+/* ── GLOW ORBS ── */
+.orb{position:fixed;border-radius:50%;pointer-events:none;z-index:0;filter:blur(80px);}
+.orb-1{width:500px;height:500px;top:-150px;left:-100px;background:radial-gradient(circle,rgba(74,222,128,0.07) 0%,transparent 70%);}
+.orb-2{width:400px;height:400px;bottom:-100px;right:-100px;background:radial-gradient(circle,rgba(74,222,128,0.05) 0%,transparent 70%);}
+
+/* ── WRAPPER ── */
+.wrapper{position:relative;z-index:1;min-height:100vh;display:flex;flex-direction:column;}
+
+/* ── NAV ── */
+nav{
+  padding:20px 40px;
+  display:flex;align-items:center;justify-content:space-between;
+  border-bottom:1px solid var(--border);
+  background:rgba(11,11,13,0.8);
+  backdrop-filter:blur(20px);
+  position:sticky;top:0;z-index:100;
+  animation:fadeDown 0.5s ease both;
+}
+.nav-brand{display:flex;align-items:center;gap:10px;text-decoration:none;}
+.nav-logo{
+  width:30px;height:30px;border-radius:8px;
+  background:var(--accent-dim);border:1px solid rgba(74,222,128,0.2);
+  display:grid;place-items:center;flex-shrink:0;
+}
+.nav-logo svg{width:14px;height:14px;stroke:var(--accent);fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;}
+.nav-brand-name{font-family:var(--serif);font-weight:200;font-size:16px;letter-spacing:-0.3px;color:var(--text);}
+.nav-links{display:flex;align-items:center;gap:4px;}
+.nav-link{
+  padding:6px 12px;border-radius:7px;font-size:12px;color:var(--text-muted);
+  text-decoration:none;transition:all 0.15s;border:1px solid transparent;
+  font-family:var(--mono);
+}
+.nav-link:hover{color:var(--text);background:var(--surface2);border-color:var(--border);}
+.nav-link.accent{color:var(--accent);border-color:rgba(74,222,128,0.25);background:var(--accent-dim);}
+.nav-link.accent:hover{background:rgba(74,222,128,0.12);border-color:rgba(74,222,128,0.4);}
+.nav-actions{display:flex;align-items:center;gap:8px;}
+.admin-indicator{width:6px;height:6px;border-radius:50%;background:var(--accent);display:none;margin-left:4px;box-shadow:0 0 6px var(--accent);}
+.admin-indicator.visible{display:block;}
+
+/* ── HERO ── */
+.hero{
+  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:80px 40px 60px;text-align:center;
+  animation:fadeUp 0.6s ease 0.1s both;
+}
+.hero-eyebrow{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:4px 12px;border-radius:20px;
+  border:1px solid rgba(74,222,128,0.2);background:var(--accent-dim);
+  font-size:10px;text-transform:uppercase;letter-spacing:1.2px;color:var(--accent);
+  margin-bottom:24px;
+}
+.hero-eyebrow::before{content:'';width:5px;height:5px;border-radius:50%;background:var(--accent);animation:pulse 2s ease infinite;}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.5;transform:scale(0.8)}}
+.hero-title{
+  font-family:var(--serif);font-weight:200;
+  font-size:clamp(42px,7vw,80px);
+  letter-spacing:-2px;line-height:1.05;
+  margin-bottom:20px;
+  color:var(--text);
+}
+.hero-title em{font-style:italic;color:var(--accent);}
+.hero-sub{
+  font-size:14px;color:var(--text-muted);max-width:400px;
+  line-height:1.8;margin-bottom:48px;
+}
+
+/* ── CARDS GRID ── */
+.cards{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+  gap:16px;
+  padding:0 40px 80px;
+  max-width:1100px;
+  margin:0 auto;
+  width:100%;
+  animation:fadeUp 0.6s ease 0.25s both;
+}
+
+.card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:16px;
+  padding:28px;
+  text-decoration:none;
+  color:var(--text);
+  display:flex;flex-direction:column;gap:16px;
+  transition:all 0.2s cubic-bezier(0.2,0,0,1);
+  position:relative;overflow:hidden;
+  cursor:pointer;
+}
+.card::before{
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(circle at var(--mx,50%) var(--my,50%),rgba(74,222,128,0.06) 0%,transparent 60%);
+  opacity:0;transition:opacity 0.3s;
+}
+.card:hover::before{opacity:1;}
+.card:hover{
+  border-color:rgba(74,222,128,0.25);
+  transform:translateY(-3px);
+  box-shadow:0 20px 60px rgba(0,0,0,0.4),0 0 0 1px rgba(74,222,128,0.1) inset;
+}
+.card-icon{
+  width:44px;height:44px;border-radius:12px;
+  background:var(--accent-dim);border:1px solid rgba(74,222,128,0.15);
+  display:grid;place-items:center;flex-shrink:0;
+}
+.card-icon svg{width:20px;height:20px;stroke:var(--accent);fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;}
+.card-body{flex:1;}
+.card-title{font-family:var(--serif);font-weight:200;font-size:18px;letter-spacing:-0.3px;margin-bottom:6px;}
+.card-desc{font-size:12px;color:var(--text-muted);line-height:1.7;}
+.card-footer{display:flex;align-items:center;justify-content:space-between;}
+.card-tag{font-size:10px;text-transform:uppercase;letter-spacing:0.8px;color:var(--text-dim);}
+.card-arrow{
+  width:28px;height:28px;border-radius:7px;
+  border:1px solid var(--border);background:none;
+  display:grid;place-items:center;color:var(--text-dim);
+  transition:all 0.15s;
+}
+.card:hover .card-arrow{color:var(--accent);border-color:rgba(74,222,128,0.3);background:var(--accent-dim);}
+.card-arrow svg{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+
+/* github card variant */
+.card.github .card-icon{background:rgba(255,255,255,0.04);border-color:rgba(255,255,255,0.08);}
+.card.github .card-icon svg{stroke:var(--text-muted);}
+.card.github:hover .card-arrow{color:var(--text-muted);border-color:var(--border-strong);background:var(--surface2);}
+
+/* ── FOOTER ── */
+footer{
+  border-top:1px solid var(--border);
+  padding:24px 40px;
+  display:flex;align-items:center;justify-content:space-between;
+  font-size:11px;color:var(--text-dim);
+  position:relative;z-index:1;
+  animation:fadeUp 0.6s ease 0.35s both;
+}
+footer a{color:var(--text-muted);text-decoration:none;}
+footer a:hover{color:var(--accent);}
+.footer-links{display:flex;gap:20px;}
+
+/* ── ANIMATIONS ── */
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeDown{from{opacity:0;transform:translateY(-12px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── ADMIN PANEL ── */
+.admin-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;
+  display:none;align-items:center;justify-content:center;
+  backdrop-filter:blur(12px);padding:16px;
+}
+.admin-overlay.visible{display:flex;animation:fadeIn 0.18s ease;}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+
+.admin-panel{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:18px;width:700px;max-width:100%;
+  max-height:90vh;overflow:hidden;display:flex;flex-direction:column;
+  box-shadow:0 40px 120px rgba(0,0,0,0.9);
+  animation:panelIn 0.22s cubic-bezier(0.2,0,0,1);
+}
+@keyframes panelIn{from{opacity:0;transform:scale(0.95) translateY(8px)}to{opacity:1;transform:scale(1) translateY(0)}}
+
+.admin-header{
+  padding:20px 24px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;flex-shrink:0;
+}
+.admin-title{font-family:var(--serif);font-weight:200;font-size:20px;letter-spacing:-0.3px;}
+.admin-title span{color:var(--danger);}
+.admin-close{
+  width:30px;height:30px;border-radius:7px;border:1px solid var(--border);
+  background:none;color:var(--text-muted);cursor:pointer;
+  display:grid;place-items:center;font-size:16px;transition:all 0.12s;
+}
+.admin-close:hover{color:var(--text);background:var(--surface2);}
+
+.admin-auth{padding:32px 24px;display:flex;flex-direction:column;gap:14px;align-items:center;}
+.admin-auth-label{font-size:12px;color:var(--text-muted);}
+.admin-pw-input{
+  width:280px;padding:12px 16px;
+  background:var(--surface2);border:1px solid var(--border);border-radius:10px;
+  color:var(--text);font-family:var(--mono);font-size:16px;letter-spacing:4px;
+  text-align:center;outline:none;transition:border-color 0.15s;
+}
+.admin-pw-input:focus{border-color:var(--accent);}
+.admin-pw-input.error{border-color:var(--danger);animation:shake 0.35s ease;}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-5px)}40%{transform:translateX(5px)}60%{transform:translateX(-3px)}80%{transform:translateX(3px)}}
+.admin-pw-btn{
+  padding:10px 28px;border-radius:9px;border:none;
+  background:var(--accent);color:#061208;font-family:var(--mono);font-size:13px;
+  cursor:pointer;transition:all 0.15s;
+}
+.admin-pw-btn:hover{filter:brightness(1.08);}
+.admin-pw-err{font-size:11px;color:var(--danger);min-height:16px;}
+
+.admin-body{flex:1;overflow-y:auto;padding:20px 24px;display:flex;flex-direction:column;gap:20px;}
+.admin-body::-webkit-scrollbar{width:4px;}
+.admin-body::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+
+.admin-section{display:flex;flex-direction:column;gap:10px;}
+.admin-section-title{
+  font-size:10px;text-transform:uppercase;letter-spacing:0.8px;color:var(--text-dim);
+  border-bottom:1px solid var(--border);padding-bottom:8px;margin-bottom:4px;
+}
+.admin-row{display:flex;align-items:center;gap:10px;}
+.admin-label{font-size:11px;color:var(--text-muted);width:120px;flex-shrink:0;}
+.admin-input{
+  flex:1;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);
+  border-radius:7px;color:var(--text);font-family:var(--mono);font-size:12px;outline:none;
+  transition:border-color 0.15s;
+}
+.admin-input:focus{border-color:var(--accent);}
+.admin-input::placeholder{color:var(--text-dim);}
+.admin-textarea{
+  width:100%;padding:10px 12px;background:var(--surface2);border:1px solid var(--border);
+  border-radius:7px;color:var(--text);font-family:var(--mono);font-size:12px;outline:none;
+  resize:vertical;min-height:80px;transition:border-color 0.15s;
+}
+.admin-textarea:focus{border-color:var(--accent);}
+
+.admin-card-editor{
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:8px;
+}
+.admin-card-editor-title{font-size:11px;color:var(--text-muted);margin-bottom:4px;display:flex;align-items:center;justify-content:space-between;}
+.admin-card-toggle{
+  width:22px;height:22px;border-radius:5px;border:1px solid var(--border);
+  background:none;color:var(--text-dim);cursor:pointer;font-size:11px;
+  display:grid;place-items:center;transition:all 0.12s;
+}
+.admin-card-toggle:hover{color:var(--danger);border-color:rgba(248,113,113,0.3);}
+.admin-color-row{display:flex;align-items:center;gap:8px;}
+.admin-color-input{width:40px;height:32px;border:1px solid var(--border);border-radius:6px;padding:2px;background:var(--surface2);cursor:pointer;}
+
+.admin-footer{
+  padding:16px 24px;border-top:1px solid var(--border);
+  display:flex;gap:8px;justify-content:flex-end;flex-shrink:0;
+}
+.admin-btn{
+  padding:8px 20px;border-radius:8px;border:1px solid var(--border);
+  background:none;font-family:var(--mono);font-size:12px;color:var(--text-muted);
+  cursor:pointer;transition:all 0.15s;
+}
+.admin-btn:hover{color:var(--text);background:var(--surface2);}
+.admin-btn.save{background:var(--accent);border-color:var(--accent);color:#061208;}
+.admin-btn.save:hover{filter:brightness(1.08);}
+
+.admin-favicon-preview{
+  width:40px;height:40px;border-radius:8px;border:1px solid var(--border);
+  background:var(--surface3);display:grid;place-items:center;flex-shrink:0;overflow:hidden;
+}
+.admin-favicon-preview img{width:32px;height:32px;object-fit:contain;}
+
+/* ── TOAST ── */
+.toast{
+  position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(60px);
+  background:var(--surface2);border:1px solid var(--border);border-radius:10px;
+  padding:10px 18px;font-size:12px;color:var(--text);z-index:99999;
+  transition:transform 0.28s cubic-bezier(0.2,0,0,1),opacity 0.28s;opacity:0;
+  white-space:nowrap;box-shadow:0 8px 32px rgba(0,0,0,0.5);
+}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
+.toast.success{border-color:rgba(74,222,128,0.3);color:var(--accent);}
+.toast.error{border-color:rgba(248,113,113,0.3);color:var(--danger);}
+
+/* ── MOBILE ── */
+@media(max-width:640px){
+  nav{padding:14px 20px;}
+  .nav-links{display:none;}
+  .hero{padding:60px 20px 40px;}
+  .cards{padding:0 20px 60px;gap:12px;}
+  footer{padding:20px;flex-direction:column;gap:12px;text-align:center;}
+  .footer-links{justify-content:center;}
+}
+</style>
 </head>
 <body>
 
-    <h1>This is a Main Heading</h1>
-    <p>This is a paragraph of text. It demonstrates how text is structured in HTML documents.</p>
+<div class="grid-bg"></div>
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
 
-    <h2>Common HTML Elements:</h2>
-    <ul>
-        <li><a href="https://www.w3schools.com/html/html_links.asp">Links</a> are created using the `<a>` tag, as seen here.</li>
-        <li><a href="https://www.w3schools.com/html/html_images.asp">Images</a> are embedded with the `<img>` tag.</li>
-        <li><a href="https://www.w3schools.com">Lists</a> are created with `<ul>` (unordered) or `<ol>` (ordered) and `<li>` tags.</li>
-    </ul>
+<div class="wrapper">
+  <nav id="main-nav">
+    <a class="nav-brand" href="#">
+      <div class="nav-logo">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1" fill="currentColor" stroke="none"/></svg>
+      </div>
+      <span class="nav-brand-name" id="nav-brand-text">Partials</span>
+    </a>
+    <div class="nav-links" id="nav-links">
+      <a class="nav-link" href="https://partials-gh.github.io/htmlpreviewer/" target="_blank" id="navl-0">HTML Previewer</a>
+      <a class="nav-link" href="https://partials-gh.github.io/chatbubble/" target="_blank" id="navl-1">Chat Bubble</a>
+      <a class="nav-link" href="https://partials-gh.github.io/newsletter/" target="_blank" id="navl-2">Newsletter</a>
+      <a class="nav-link" href="https://github.com/partials-gh/bubble" target="_blank" id="navl-3">Bubble</a>
+    </div>
+    <div class="nav-actions">
+      <div class="admin-indicator" id="admin-indicator"></div>
+    </div>
+  </nav>
 
+  <section class="hero">
+    <div class="hero-eyebrow" id="hero-eyebrow">Live Projects</div>
+    <h1 class="hero-title" id="hero-title">Everything<br><em>Partials</em><br>built.</h1>
+    <p class="hero-sub" id="hero-sub">A collection of tools, apps, and experiments. Pick something and start using it.</p>
+  </section>
+
+  <div class="cards" id="cards-grid">
+
+    <a class="card" href="https://partials-gh.github.io/htmlpreviewer/" target="_blank" id="card-0"
+      onmousemove="cardGlow(event,this)" onmouseleave="clearGlow(this)">
+      <div class="card-icon">
+        <svg viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+      </div>
+      <div class="card-body">
+        <div class="card-title">HTML Previewer</div>
+        <div class="card-desc">Paste and preview raw HTML instantly in the browser. No setup, no build steps.</div>
+      </div>
+      <div class="card-footer">
+        <span class="card-tag">Tool</span>
+        <div class="card-arrow"><svg viewBox="0 0 24 24"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg></div>
+      </div>
+    </a>
+
+    <a class="card" href="https://partials-gh.github.io/chatbubble/" target="_blank" id="card-1"
+      onmousemove="cardGlow(event,this)" onmouseleave="clearGlow(this)">
+      <div class="card-icon">
+        <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+      </div>
+      <div class="card-body">
+        <div class="card-title">Chat Bubble</div>
+        <div class="card-desc">Real-time private messaging. Share a code, start chatting. Group chats included.</div>
+      </div>
+      <div class="card-footer">
+        <span class="card-tag">App</span>
+        <div class="card-arrow"><svg viewBox="0 0 24 24"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg></div>
+      </div>
+    </a>
+
+    <a class="card" href="https://partials-gh.github.io/newsletter/" target="_blank" id="card-2"
+      onmousemove="cardGlow(event,this)" onmouseleave="clearGlow(this)">
+      <div class="card-icon">
+        <svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22 6 12 13 2 6"/></svg>
+      </div>
+      <div class="card-body">
+        <div class="card-title">Newsletter</div>
+        <div class="card-desc">Subscribe and stay in the loop. Updates, releases, and whatever comes next.</div>
+      </div>
+      <div class="card-footer">
+        <span class="card-tag">Content</span>
+        <div class="card-arrow"><svg viewBox="0 0 24 24"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg></div>
+      </div>
+    </a>
+
+    <a class="card github" href="https://github.com/partials-gh/bubble" target="_blank" id="card-3"
+      onmousemove="cardGlow(event,this)" onmouseleave="clearGlow(this)">
+      <div class="card-icon">
+        <svg viewBox="0 0 24 24"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12" fill="currentColor" stroke="none"/></svg>
+      </div>
+      <div class="card-body">
+        <div class="card-title">Bubble</div>
+        <div class="card-desc">A social media platform. Posts, feeds, follows, verified badges. Open on GitHub.</div>
+      </div>
+      <div class="card-footer">
+        <span class="card-tag">Social / GitHub</span>
+        <div class="card-arrow"><svg viewBox="0 0 24 24"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg></div>
+      </div>
+    </a>
+
+  </div>
+
+  <footer id="main-footer">
+    <span id="footer-left">© <span id="footer-year"></span> Partials. All rights reserved.</span>
+    <div class="footer-links" id="footer-links">
+      <a href="https://github.com/partials-gh" target="_blank" id="footer-link-github">GitHub</a>
+      <a href="https://partials-gh.github.io/chatbubble/" target="_blank" id="footer-link-chat">Chat</a>
+      <a href="https://partials-gh.github.io/newsletter/" target="_blank" id="footer-link-newsletter">Newsletter</a>
+    </div>
+  </footer>
+</div>
+
+<!-- ═══════════════════ ADMIN PANEL ═══════════════════ -->
+<div class="admin-overlay" id="admin-overlay">
+  <div class="admin-panel">
+    <div class="admin-header">
+      <div class="admin-title">Admin <span>Panel</span></div>
+      <button class="admin-close" onclick="closeAdmin()">×</button>
+    </div>
+
+    <!-- AUTH SCREEN -->
+    <div id="admin-auth-screen" class="admin-auth">
+      <div class="admin-auth-label">Enter admin password</div>
+      <input class="admin-pw-input" id="admin-pw" type="password" placeholder="••••••••"
+        onkeydown="if(event.key==='Enter')checkAdminPw()">
+      <button class="admin-pw-btn" onclick="checkAdminPw()">Unlock</button>
+      <div class="admin-pw-err" id="admin-pw-err"></div>
+      <div style="font-size:10px;color:var(--text-dim);margin-top:8px">⌘A — MacOS only</div>
+    </div>
+
+    <!-- EDITOR (hidden until unlocked) -->
+    <div id="admin-editor" style="display:none;flex:1;overflow:hidden;flex-direction:column;display:none;">
+      <div class="admin-body">
+
+        <!-- SITE META -->
+        <div class="admin-section">
+          <div class="admin-section-title">Site Meta</div>
+          <div class="admin-row">
+            <span class="admin-label">Page Title</span>
+            <input class="admin-input" id="ae-title" placeholder="Partials">
+          </div>
+          <div class="admin-row">
+            <span class="admin-label">Favicon URL</span>
+            <input class="admin-input" id="ae-favicon" placeholder="https://… or data:image/…">
+            <div class="admin-favicon-preview" id="ae-favicon-preview">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="1.5"><circle cx="12" cy="12" r="5"/></svg>
+            </div>
+          </div>
+          <div style="font-size:10px;color:var(--text-dim);padding-left:130px">Leave blank to keep current favicon</div>
+        </div>
+
+        <!-- NAV -->
+        <div class="admin-section">
+          <div class="admin-section-title">Navigation</div>
+          <div class="admin-row">
+            <span class="admin-label">Brand Name</span>
+            <input class="admin-input" id="ae-brand" placeholder="Partials">
+          </div>
+          <div id="ae-nav-links" style="display:flex;flex-direction:column;gap:6px;margin-top:4px"></div>
+          <button onclick="addNavLink()" style="align-self:flex-start;margin-top:6px;padding:5px 12px;border-radius:6px;border:1px solid var(--border);background:none;color:var(--text-muted);font-family:var(--mono);font-size:11px;cursor:pointer;" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--text-muted)'">+ Add Nav Link</button>
+        </div>
+
+        <!-- HERO -->
+        <div class="admin-section">
+          <div class="admin-section-title">Hero Section</div>
+          <div class="admin-row">
+            <span class="admin-label">Eyebrow Tag</span>
+            <input class="admin-input" id="ae-eyebrow" placeholder="Live Projects">
+          </div>
+          <div class="admin-row">
+            <span class="admin-label">Heading Line 1</span>
+            <input class="admin-input" id="ae-h1" placeholder="Everything">
+          </div>
+          <div class="admin-row">
+            <span class="admin-label">Heading Line 2</span>
+            <input class="admin-input" id="ae-h2" placeholder="Partials">
+          </div>
+          <div class="admin-row">
+            <span class="admin-label">Heading Line 3</span>
+            <input class="admin-input" id="ae-h3" placeholder="built.">
+          </div>
+          <div class="admin-row">
+            <span class="admin-label">Subtext</span>
+            <input class="admin-input" id="ae-sub" placeholder="A collection of tools…">
+          </div>
+        </div>
+
+        <!-- CARDS -->
+        <div class="admin-section">
+          <div class="admin-section-title">Project Cards</div>
+          <div id="ae-cards" style="display:flex;flex-direction:column;gap:10px;"></div>
+          <button onclick="addCard()" style="align-self:flex-start;margin-top:6px;padding:5px 12px;border-radius:6px;border:1px solid var(--border);background:none;color:var(--text-muted);font-family:var(--mono);font-size:11px;cursor:pointer;" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--text-muted)'">+ Add Card</button>
+        </div>
+
+        <!-- FOOTER -->
+        <div class="admin-section">
+          <div class="admin-section-title">Footer</div>
+          <div class="admin-row">
+            <span class="admin-label">Left Text</span>
+            <input class="admin-input" id="ae-footer-left" placeholder="© 2025 Partials. All rights reserved.">
+          </div>
+          <div id="ae-footer-links" style="display:flex;flex-direction:column;gap:6px;margin-top:4px"></div>
+          <button onclick="addFooterLink()" style="align-self:flex-start;margin-top:6px;padding:5px 12px;border-radius:6px;border:1px solid var(--border);background:none;color:var(--text-muted);font-family:var(--mono);font-size:11px;cursor:pointer;" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--text-muted)'">+ Add Footer Link</button>
+        </div>
+
+        <!-- ACCENT COLOR -->
+        <div class="admin-section">
+          <div class="admin-section-title">Theme</div>
+          <div class="admin-row">
+            <span class="admin-label">Accent Color</span>
+            <div class="admin-color-row">
+              <input class="admin-color-input" type="color" id="ae-accent" value="#4ade80" oninput="previewAccent(this.value)">
+              <input class="admin-input" id="ae-accent-hex" placeholder="#4ade80" style="width:120px;flex:none" oninput="syncColorPicker()">
+              <span style="font-size:11px;color:var(--text-dim)">Live preview</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+      <div class="admin-footer">
+        <button class="admin-btn" onclick="resetAdmin()">Reset to Saved</button>
+        <button class="admin-btn" onclick="closeAdmin()">Cancel</button>
+        <button class="admin-btn save" onclick="saveAdmin()">Save Changes</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── CARD GLOW ──
+function cardGlow(e, card) {
+  const r = card.getBoundingClientRect();
+  const x = ((e.clientX - r.left) / r.width * 100).toFixed(1) + '%';
+  const y = ((e.clientY - r.top) / r.height * 100).toFixed(1) + '%';
+  card.style.setProperty('--mx', x);
+  card.style.setProperty('--my', y);
+}
+function clearGlow(card) {
+  card.style.setProperty('--mx', '50%');
+  card.style.setProperty('--my', '50%');
+}
+
+// ── FOOTER YEAR ──
+document.getElementById('footer-year').textContent = new Date().getFullYear();
+
+// ── SUPABASE ──
+const SB_URL  = 'https://baiarwsosjjrfykhkwnu.supabase.co';
+const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJhaWFyd3Nvc2pqcmZ5a2hrd251Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI1ODY2MzAsImV4cCI6MjA4ODE2MjYzMH0.KrVhqx0IN64REMr6gkLvn3SqpagRC4XIxvwrtbJLni4';
+const sb = supabase.createClient(SB_URL, SB_ANON);
+
+// ── TOAST ──
+function showToast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'toast ' + (type||'') + ' show';
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+// ── STORAGE (localStorage fallback + Supabase primary) ──
+const STORE_KEY = 'partials_site_config';
+function loadLocalConfig() {
+  try { return JSON.parse(localStorage.getItem(STORE_KEY)) || {}; } catch { return {}; }
+}
+function saveLocalConfig(cfg) { localStorage.setItem(STORE_KEY, JSON.stringify(cfg)); }
+
+async function loadConfig() {
+  try {
+    const { data, error } = await sb.from('site_config').select('config').eq('id', 1).single();
+    if (error || !data) return loadLocalConfig();
+    const cfg = data.config || {};
+    saveLocalConfig(cfg); // keep local in sync
+    return cfg;
+  } catch {
+    return loadLocalConfig();
+  }
+}
+
+async function saveConfig(cfg) {
+  saveLocalConfig(cfg); // always save locally too
+  const { error } = await sb.from('site_config').upsert({ id: 1, config: cfg, updated_at: new Date().toISOString() });
+  if (error) throw new Error(error.message);
+}
+
+// ── REALTIME SUBSCRIPTION ──
+function subscribeToConfig() {
+  sb.channel('site_config_changes')
+    .on('postgres_changes', {
+      event: 'UPDATE',
+      schema: 'public',
+      table: 'site_config',
+      filter: 'id=eq.1'
+    }, payload => {
+      const cfg = payload.new?.config;
+      if (cfg) {
+        saveLocalConfig(cfg);
+        applyConfig(cfg);
+      }
+    })
+    .subscribe();
+}
+
+// ── APPLY CONFIG ──
+function applyConfig(cfg) {
+  if (!cfg) return;
+  if (cfg.title) document.title = cfg.title;
+  if (cfg.favicon) setFavicon(cfg.favicon);
+  if (cfg.brand) document.getElementById('nav-brand-text').textContent = cfg.brand;
+  if (cfg.accent) applyAccent(cfg.accent);
+  if (cfg.eyebrow) document.getElementById('hero-eyebrow').textContent = cfg.eyebrow;
+  if (cfg.h1 || cfg.h2 || cfg.h3) {
+    const titleEl = document.getElementById('hero-title');
+    const l1 = cfg.h1 || 'Everything';
+    const l2 = cfg.h2 || 'Partials';
+    const l3 = cfg.h3 || 'built.';
+    titleEl.innerHTML = l1 + '<br><em>' + escHtml(l2) + '</em><br>' + escHtml(l3);
+  }
+  if (cfg.sub) document.getElementById('hero-sub').textContent = cfg.sub;
+  if (cfg.footerLeft) document.getElementById('footer-left').innerHTML = cfg.footerLeft;
+
+  // Nav links
+  if (cfg.navLinks) {
+    const nl = document.getElementById('nav-links');
+    nl.innerHTML = '';
+    cfg.navLinks.forEach((lnk, i) => {
+      const a = document.createElement('a');
+      a.className = 'nav-link';
+      a.href = lnk.url; a.target = '_blank';
+      a.id = 'navl-' + i;
+      a.textContent = lnk.label;
+      nl.appendChild(a);
+    });
+  }
+
+  // Cards
+  if (cfg.cards) {
+    const grid = document.getElementById('cards-grid');
+    grid.innerHTML = '';
+    cfg.cards.forEach((c, i) => {
+      const el = document.createElement('a');
+      el.className = 'card' + (c.github ? ' github' : '');
+      el.href = c.url; el.target = '_blank'; el.id = 'card-' + i;
+      el.setAttribute('onmousemove', 'cardGlow(event,this)');
+      el.setAttribute('onmouseleave', 'clearGlow(this)');
+      el.innerHTML = `
+        <div class="card-icon"><svg viewBox="0 0 24 24">${c.iconSvg || '<circle cx="12" cy="12" r="5"/>'}</svg></div>
+        <div class="card-body">
+          <div class="card-title">${escHtml(c.title)}</div>
+          <div class="card-desc">${escHtml(c.desc)}</div>
+        </div>
+        <div class="card-footer">
+          <span class="card-tag">${escHtml(c.tag)}</span>
+          <div class="card-arrow"><svg viewBox="0 0 24 24"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg></div>
+        </div>`;
+      grid.appendChild(el);
+    });
+  }
+
+  // Footer links
+  if (cfg.footerLinks) {
+    const fl = document.getElementById('footer-links');
+    fl.innerHTML = '';
+    cfg.footerLinks.forEach((lnk, i) => {
+      const a = document.createElement('a');
+      a.href = lnk.url; a.target = '_blank'; a.id = 'footer-link-' + i;
+      a.textContent = lnk.label;
+      fl.appendChild(a);
+    });
+  }
+}
+
+function setFavicon(url) {
+  if (!url) return;
+  let link = document.getElementById('favicon-link');
+  if (!link) { link = document.createElement('link'); link.rel = 'icon'; link.id = 'favicon-link'; document.head.appendChild(link); }
+  link.href = url;
+}
+
+function applyAccent(hex) {
+  document.documentElement.style.setProperty('--accent', hex);
+  // Derive dim and glow
+  document.documentElement.style.setProperty('--accent-dim', hex + '14');
+  document.documentElement.style.setProperty('--accent-glow', hex + '26');
+}
+
+function escHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// Apply on load
+applyConfig(loadConfig());
+
+// ── ADMIN UNLOCK ──
+let adminUnlocked = false;
+
+// MacOS ⌘A shortcut
+document.addEventListener('keydown', e => {
+  if (e.metaKey && e.key === 'a' && !e.shiftKey && !e.altKey) {
+    e.preventDefault();
+    openAdmin();
+  }
+  if (e.key === 'Escape') closeAdmin();
+});
+
+function openAdmin() {
+  document.getElementById('admin-overlay').classList.add('visible');
+  if (!adminUnlocked) {
+    document.getElementById('admin-auth-screen').style.display = 'flex';
+    document.getElementById('admin-editor').style.display = 'none';
+    setTimeout(() => document.getElementById('admin-pw').focus(), 100);
+  } else {
+    populateEditor();
+  }
+}
+
+function closeAdmin() {
+  document.getElementById('admin-overlay').classList.remove('visible');
+  document.getElementById('admin-pw').value = '';
+  document.getElementById('admin-pw-err').textContent = '';
+  document.getElementById('admin-pw').classList.remove('error');
+}
+
+// Obfuscated password check
+function checkAdminPw() {
+  const pw = document.getElementById('admin-pw').value;
+  const input = document.getElementById('admin-pw');
+  const errEl = document.getElementById('admin-pw-err');
+  // Check: Braveegg47!
+  const encoded = [66,114,97,118,101,101,103,103,52,55,33];
+  const correct = encoded.map(c => String.fromCharCode(c)).join('');
+  if (pw === correct) {
+    adminUnlocked = true;
+    document.getElementById('admin-auth-screen').style.display = 'none';
+    const ed = document.getElementById('admin-editor');
+    ed.style.display = 'flex';
+    ed.style.flexDirection = 'column';
+    document.getElementById('admin-indicator').classList.add('visible');
+    populateEditor();
+    errEl.textContent = '';
+    input.classList.remove('error');
+  } else {
+    input.classList.add('error');
+    errEl.textContent = 'Incorrect password.';
+    setTimeout(() => input.classList.remove('error'), 400);
+  }
+}
+
+// ── EDITOR POPULATION ──
+function populateEditor() {
+  const cfg = loadConfig();
+
+  document.getElementById('ae-title').value = cfg.title || document.title || 'Partials';
+  document.getElementById('ae-favicon').value = cfg.favicon || '';
+  document.getElementById('ae-brand').value = cfg.brand || 'Partials';
+  document.getElementById('ae-eyebrow').value = cfg.eyebrow || 'Live Projects';
+  document.getElementById('ae-h1').value = cfg.h1 || 'Everything';
+  document.getElementById('ae-h2').value = cfg.h2 || 'Partials';
+  document.getElementById('ae-h3').value = cfg.h3 || 'built.';
+  document.getElementById('ae-sub').value = cfg.sub || 'A collection of tools, apps, and experiments. Pick something and start using it.';
+  document.getElementById('ae-footer-left').value = cfg.footerLeft || '';
+  const accent = cfg.accent || '#4ade80';
+  document.getElementById('ae-accent').value = accent;
+  document.getElementById('ae-accent-hex').value = accent;
+
+  // Update favicon preview
+  updateFaviconPreview(cfg.favicon);
+
+  // Nav links
+  const navLinks = cfg.navLinks || [
+    { label: 'HTML Previewer', url: 'https://partials-gh.github.io/htmlpreviewer/' },
+    { label: 'Chat Bubble', url: 'https://partials-gh.github.io/chatbubble/' },
+    { label: 'Newsletter', url: 'https://partials-gh.github.io/newsletter/' },
+    { label: 'Bubble', url: 'https://github.com/partials-gh/bubble' }
+  ];
+  renderNavLinksEditor(navLinks);
+
+  // Cards
+  const cards = cfg.cards || [
+    { title: 'HTML Previewer', desc: 'Paste and preview raw HTML instantly in the browser.', tag: 'Tool', url: 'https://partials-gh.github.io/htmlpreviewer/', iconSvg: '<polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>' },
+    { title: 'Chat Bubble', desc: 'Real-time private messaging. Share a code, start chatting.', tag: 'App', url: 'https://partials-gh.github.io/chatbubble/', iconSvg: '<path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>' },
+    { title: 'Newsletter', desc: 'Subscribe and stay in the loop.', tag: 'Content', url: 'https://partials-gh.github.io/newsletter/', iconSvg: '<path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22 6 12 13 2 6"/>' },
+    { title: 'Bubble', desc: 'A social media platform. Open on GitHub.', tag: 'Social / GitHub', url: 'https://github.com/partials-gh/bubble', github: true, iconSvg: '<path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12" fill="currentColor" stroke="none"/>' }
+  ];
+  renderCardsEditor(cards);
+
+  // Footer links
+  const footerLinks = cfg.footerLinks || [
+    { label: 'GitHub', url: 'https://github.com/partials-gh' },
+    { label: 'Chat', url: 'https://partials-gh.github.io/chatbubble/' },
+    { label: 'Newsletter', url: 'https://partials-gh.github.io/newsletter/' }
+  ];
+  renderFooterLinksEditor(footerLinks);
+}
+
+// ── FAVICON PREVIEW ──
+function updateFaviconPreview(url) {
+  const prev = document.getElementById('ae-favicon-preview');
+  if (url && url.trim()) {
+    prev.innerHTML = '<img src="' + escHtml(url) + '" onerror="this.style.display=\'none\'">';
+  } else {
+    prev.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="1.5"><circle cx="12" cy="12" r="5"/></svg>';
+  }
+}
+document.getElementById('ae-favicon').addEventListener('input', function() { updateFaviconPreview(this.value); });
+
+// ── NAV LINKS EDITOR ──
+let navLinksData = [];
+function renderNavLinksEditor(links) {
+  navLinksData = links.map(l => ({...l}));
+  const el = document.getElementById('ae-nav-links');
+  el.innerHTML = navLinksData.map((l, i) => `
+    <div class="admin-row" id="nle-${i}">
+      <span class="admin-label" style="width:70px;flex-shrink:0">Label</span>
+      <input class="admin-input" value="${escHtml(l.label)}" placeholder="Label" oninput="navLinksData[${i}].label=this.value" style="flex:0.5">
+      <input class="admin-input" value="${escHtml(l.url)}" placeholder="URL" oninput="navLinksData[${i}].url=this.value">
+      <button class="admin-card-toggle" onclick="removeNavLink(${i})">×</button>
+    </div>`).join('');
+}
+function addNavLink() { navLinksData.push({ label: 'New Link', url: 'https://' }); renderNavLinksEditor(navLinksData); }
+function removeNavLink(i) { navLinksData.splice(i, 1); renderNavLinksEditor(navLinksData); }
+
+// ── CARDS EDITOR ──
+let cardsData = [];
+function renderCardsEditor(cards) {
+  cardsData = cards.map(c => ({...c}));
+  const el = document.getElementById('ae-cards');
+  el.innerHTML = cardsData.map((c, i) => `
+    <div class="admin-card-editor">
+      <div class="admin-card-editor-title">
+        <span>Card ${i+1}</span>
+        <button class="admin-card-toggle" onclick="removeCard(${i})">×</button>
+      </div>
+      <div class="admin-row">
+        <span class="admin-label" style="width:70px">Title</span>
+        <input class="admin-input" value="${escHtml(c.title)}" placeholder="Card title" oninput="cardsData[${i}].title=this.value">
+      </div>
+      <div class="admin-row">
+        <span class="admin-label" style="width:70px">URL</span>
+        <input class="admin-input" value="${escHtml(c.url)}" placeholder="https://…" oninput="cardsData[${i}].url=this.value">
+      </div>
+      <div class="admin-row">
+        <span class="admin-label" style="width:70px">Tag</span>
+        <input class="admin-input" value="${escHtml(c.tag)}" placeholder="Tool / App / etc" oninput="cardsData[${i}].tag=this.value" style="max-width:140px">
+        <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-muted);cursor:pointer;flex-shrink:0">
+          <input type="checkbox" ${c.github?'checked':''} onchange="cardsData[${i}].github=this.checked" style="accent-color:var(--accent)"> GitHub style
+        </label>
+      </div>
+      <textarea class="admin-textarea" placeholder="Card description" oninput="cardsData[${i}].desc=this.value" style="min-height:56px">${escHtml(c.desc)}</textarea>
+    </div>`).join('');
+}
+function addCard() { cardsData.push({ title: 'New Project', desc: 'Description here.', tag: 'Tool', url: 'https://', github: false, iconSvg: '<circle cx="12" cy="12" r="5"/>' }); renderCardsEditor(cardsData); }
+function removeCard(i) { cardsData.splice(i, 1); renderCardsEditor(cardsData); }
+
+// ── FOOTER LINKS EDITOR ──
+let footerLinksData = [];
+function renderFooterLinksEditor(links) {
+  footerLinksData = links.map(l => ({...l}));
+  const el = document.getElementById('ae-footer-links');
+  el.innerHTML = footerLinksData.map((l, i) => `
+    <div class="admin-row">
+      <span class="admin-label" style="width:70px;flex-shrink:0">Label</span>
+      <input class="admin-input" value="${escHtml(l.label)}" placeholder="Label" oninput="footerLinksData[${i}].label=this.value" style="flex:0.5">
+      <input class="admin-input" value="${escHtml(l.url)}" placeholder="URL" oninput="footerLinksData[${i}].url=this.value">
+      <button class="admin-card-toggle" onclick="removeFooterLink(${i})">×</button>
+    </div>`).join('');
+}
+function addFooterLink() { footerLinksData.push({ label: 'New Link', url: 'https://' }); renderFooterLinksEditor(footerLinksData); }
+function removeFooterLink(i) { footerLinksData.splice(i, 1); renderFooterLinksEditor(footerLinksData); }
+
+// ── ACCENT COLOR ──
+function previewAccent(hex) {
+  document.getElementById('ae-accent-hex').value = hex;
+  applyAccent(hex);
+}
+function syncColorPicker() {
+  const hex = document.getElementById('ae-accent-hex').value.trim();
+  if (/^#[0-9a-fA-F]{6}$/.test(hex)) {
+    document.getElementById('ae-accent').value = hex;
+    applyAccent(hex);
+  }
+}
+
+// ── SAVE ──
+async function saveAdmin() {
+  const saveBtn = document.querySelector('.admin-btn.save');
+  saveBtn.textContent = 'Saving…'; saveBtn.disabled = true;
+  const cfg = {
+    title: document.getElementById('ae-title').value.trim() || 'Partials',
+    favicon: document.getElementById('ae-favicon').value.trim(),
+    brand: document.getElementById('ae-brand').value.trim() || 'Partials',
+    eyebrow: document.getElementById('ae-eyebrow').value.trim(),
+    h1: document.getElementById('ae-h1').value.trim(),
+    h2: document.getElementById('ae-h2').value.trim(),
+    h3: document.getElementById('ae-h3').value.trim(),
+    sub: document.getElementById('ae-sub').value.trim(),
+    footerLeft: document.getElementById('ae-footer-left').value.trim(),
+    accent: document.getElementById('ae-accent').value,
+    navLinks: navLinksData,
+    cards: cardsData,
+    footerLinks: footerLinksData,
+  };
+  try {
+    await saveConfig(cfg);
+    applyConfig(cfg);
+    closeAdmin();
+    showToast('Saved & pushed live!', 'success');
+  } catch(err) {
+    showToast('Supabase error: ' + err.message, 'error');
+  } finally {
+    saveBtn.textContent = 'Save Changes'; saveBtn.disabled = false;
+  }
+}
+
+function resetAdmin() {
+  localStorage.removeItem(STORE_KEY);
+  location.reload();
+}
+
+// Close on backdrop click
+document.getElementById('admin-overlay').addEventListener('mousedown', function(e) {
+  if (e.target === this) closeAdmin();
+});
+
+// ── LOAD & SUBSCRIBE ──
+(async () => {
+  const cfg = await loadConfig();
+  applyConfig(cfg);
+  subscribeToConfig();
+})();
+</script>
 </body>
 </html>
